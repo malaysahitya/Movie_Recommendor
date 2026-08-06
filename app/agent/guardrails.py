@@ -1,5 +1,4 @@
 from typing import Dict, Any, Tuple, Optional
-import re
 
 INAPPROPRIATE_KEYWORDS = ["explicit_nsw_flag", "malware", "hack", "illegal_substance"]
 
@@ -28,38 +27,3 @@ def model_router(task_type: str) -> str:
     elif task_type in ["analysis", "explainer"]:
         return "gemini-1.5-pro"
     return "gemini-1.5-flash"
-
-class HumanInTheLoopHook:
-    """
-    Human-In-The-Loop (HITL) Confirmation Hook:
-    Evaluates actions before execution and triggers explicit human approval for high-stakes or high-limit operations.
-    """
-    def __init__(self):
-        self.pending_approvals: Dict[str, Dict[str, Any]] = {}
-
-    def requires_approval(self, action_name: str, limit: int) -> bool:
-        """Determines if an action requires explicit human confirmation (e.g., requesting > 20 recommendations)."""
-        if limit > 20 or action_name in ["purge_cache", "bulk_query"]:
-            return True
-        return False
-
-    def request_approval(self, session_id: str, action_name: str, details: Dict[str, Any]) -> Dict[str, Any]:
-        """Registers a pending approval request for human confirmation."""
-        request_data = {
-            "session_id": session_id,
-            "action": action_name,
-            "details": details,
-            "status": "pending_human_confirmation",
-            "message": f"Action '{action_name}' requires human approval before proceeding."
-        }
-        self.pending_approvals[session_id] = request_data
-        return request_data
-
-    def confirm_approval(self, session_id: str, approved: bool) -> bool:
-        """Processes human confirmation for a pending action."""
-        if session_id in self.pending_approvals:
-            self.pending_approvals[session_id]["status"] = "approved" if approved else "rejected"
-            return approved
-        return True
-
-hitl_hook = HumanInTheLoopHook()

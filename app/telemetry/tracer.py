@@ -2,7 +2,8 @@ import time
 import json
 import re
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Generator
+from contextlib import contextmanager
 
 import structlog
 from opentelemetry import trace
@@ -43,15 +44,43 @@ def redact_pii(data: Any) -> Any:
 class Tracer:
     """
     Observability & OpenTelemetry Tracer:
-    Captures pre-execution INTENT before execution and post-execution OUTCOME after execution using OpenTelemetry & structlog.
+    Captures pre-execution INTENT before execution and post-execution OUTCOME after execution wrapping blocks in OpenTelemetry parent spans.
     """
     def __init__(self, session_id: str):
         self.session_id = redact_pii(session_id)
         self.steps: List[TraceStep] = []
         self._step_counter = 0
 
+    @contextmanager
+    def span(self, agent_name: str, action: str, inputs: Dict[str, Any]) -> Generator[None, None, None]:
+        """
+        OpenTelemetry Context Manager:
+        1. Logs PRE_EXECUTION_INTENT before execution block
+        2. Wraps block in an active OpenTelemetry trace span
+        3. Logs POST_EXECUTION_OUTCOME after execution block
+        """
+        clean_inputs = redact_pii(inputs)
+        logger.info(
+            "PRE_EXECUTION_INTENT",
+            session_id=self.session_id,
+            agent=agent_name,
+            action=action,
+            inputs=clean_inputs
+        )
+        
+        start_time = time.time()
+        
+        with otel_tracer.start_as_current_span(f"{agent_name}.{action}") as otel_span:
+            otel_span.set_attribute("session.id", self.session_id)
+            otel_span.set_attribute("agent.name", agent_name)
+            otel_span.set_attribute("action.name", action)
+            try:
+                yield
+            finally:
+                latency_ms = (time.time() - start_time) * 1000
+                otel_span.set_attribute("latency.ms", round(latency_ms, 2))
+
     def log_intent(self, agent_name: str, action: str, inputs: Dict[str, Any]):
-        """Logs pre-execution INTENT before tool/agent invocation."""
         clean_inputs = redact_pii(inputs)
         logger.info(
             "PRE_EXECUTION_INTENT",
@@ -69,20 +98,10 @@ class Tracer:
         outputs: Dict[str, Any],
         latency_ms: float
     ):
-        """Logs post-execution OUTCOME after tool/agent invocation and creates OpenTelemetry span."""
         self._step_counter += 1
-        
         clean_inputs = redact_pii(inputs)
         clean_outputs = redact_pii(outputs)
 
-        # 1. OpenTelemetry Span Creation
-        with otel_tracer.start_as_current_span(f"{agent_name}.{action}") as span:
-            span.set_attribute("session.id", self.session_id)
-            span.set_attribute("agent.name", agent_name)
-            span.set_attribute("action.name", action)
-            span.set_attribute("latency.ms", round(latency_ms, 2))
-
-        # 2. Structured JSON Outcome Log
         logger.info(
             "POST_EXECUTION_OUTCOME",
             session_id=self.session_id,
