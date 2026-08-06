@@ -1,0 +1,27 @@
+# Environment variables and API keys (CRITICAL - DO NOT REMOVE)
+.env
+.env.local
+*.env
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Database
+*.db
+*.sqlite
+movie_agent.db
+
+# macOS files
+.DS_Store

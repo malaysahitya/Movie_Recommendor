@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommender Agent — Google ADK</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-glow"></div>
+    
+    <header class="app-header">
+        <div class="logo-container">
+            <span class="logo-icon">🎬</span>
+            <div>
+                <h1>CineAgent AI</h1>
+                <p class="subtitle">Multi-Agent Movie Discovery • Powered by Google ADK</p>
+            </div>
+        </div>
+        <button id="traceBtn" class="trace-badge-btn" onclick="toggleTraceModal()">
+            ⚡ View Agent Traces
+        </button>
+    </header>
+
+    <main class="main-container">
+        <!-- Input Form Panel -->
+        <section class="control-card">
+            <h2>Select Your Movie Preferences</h2>
+            <form id="recommendForm" onsubmit="handleFormSubmit(event)">
+                <div class="form-grid">
+                    <!-- Genre Dropdown -->
+                    <div class="input-group">
+                        <label for="genreSelect">🎭 Genre</label>
+                        <select id="genreSelect" required>
+                            <option value="Action">Action</option>
+                            <option value="Comedy">Comedy</option>
+                            <option value="Drama" selected>Drama</option>
+                            <option value="Sci-Fi">Sci-Fi</option>
+                            <option value="Romance">Romance</option>
+                            <option value="Thriller">Thriller</option>
+                            <option value="Horror">Horror</option>
+                            <option value="Animation">Animation</option>
+                            <option value="Mystery">Mystery</option>
+                            <option value="Fantasy">Fantasy</option>
+                            <option value="Crime">Crime</option>
+                            <option value="Adventure">Adventure</option>
+                        </select>
+                    </div>
+
+                    <!-- Industry Selector Buttons -->
+                    <div class="input-group">
+                        <label>🌐 Industry / Category</label>
+                        <div class="industry-toggle">
+                            <button type="button" class="ind-btn active" data-value="Hollywood" onclick="setIndustry('Hollywood', this)">Hollywood</button>
+                            <button type="button" class="ind-btn" data-value="Bollywood" onclick="setIndustry('Bollywood', this)">Bollywood</button>
+                            <button type="button" class="ind-btn" data-value="Anime" onclick="setIndustry('Anime', this)">Anime</button>
+                        </div>
+                    </div>
+
+                    <!-- Year Range Inputs -->
+                    <div class="input-group full-width">
+                        <label>📅 Release Year Range: <span id="yearRangeVal" class="highlight-text">2010 - 2024</span></label>
+                        <div class="year-inputs">
+                            <div>
+                                <span class="sub-label">Start Year</span>
+                                <input type="number" id="startYear" min="1950" max="2026" value="2010" onchange="updateYearLabel()">
+                            </div>
+                            <div class="year-sep">—</div>
+                            <div>
+                                <span class="sub-label">End Year</span>
+                                <input type="number" id="endYear" min="1950" max="2026" value="2024" onchange="updateYearLabel()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="submit-btn">
+                    <span>🚀 Launch 4-Agent Research</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Loading State -->
+        <div id="loader" class="loading-state hidden">
+            <div class="spinner"></div>
+            <p id="loaderText" class="loading-text">Planner Agent formulating research execution plan...</p>
+        </div>
+
+        <!-- Movie Results Grid -->
+        <section id="resultsSection" class="results-section hidden">
+            <div class="results-header">
+                <h2 id="resultsTitle">🏆 Top 10 Recommendations</h2>
+                <div id="executionBadge" class="execution-badge">⚡ Executed in -- ms</div>
+            </div>
+
+            <div id="movieGrid" class="movie-grid">
+                <!-- Movie cards rendered dynamically -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Agent Trace Observability Modal -->
+    <div id="traceModal" class="modal hidden">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h3>⚡ Google ADK Agent Execution Trace</h3>
+                <button class="close-btn" onclick="toggleTraceModal()">&times;</button>
+            </div>
+            <div id="traceContent" class="trace-body">
+                <p>No trace recorded yet. Run a recommendation query to inspect agent execution steps.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
