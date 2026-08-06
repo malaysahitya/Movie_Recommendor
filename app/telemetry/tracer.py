@@ -3,7 +3,22 @@ import json
 import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+
+import structlog
+from opentelemetry import trace
 from app.models.movie import TraceStep, TracePayload
+
+# Initialize structlog JSON logger
+structlog.configure(
+    processors=[
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer()
+    ]
+)
+logger = structlog.get_logger()
+
+# Initialize OpenTelemetry Tracer
+otel_tracer = trace.get_tracer("movie_recommender_agent", "1.0.0")
 
 # PII Redaction regex patterns
 PII_PATTERNS = [
@@ -28,14 +43,25 @@ def redact_pii(data: Any) -> Any:
 class Tracer:
     """
     Observability & OpenTelemetry Tracer:
-    Records structured pre-execution intent, tool invocation inputs, post-execution outcomes, and latency.
+    Captures pre-execution INTENT before execution and post-execution OUTCOME after execution using OpenTelemetry & structlog.
     """
     def __init__(self, session_id: str):
         self.session_id = redact_pii(session_id)
         self.steps: List[TraceStep] = []
         self._step_counter = 0
 
-    def add_step(
+    def log_intent(self, agent_name: str, action: str, inputs: Dict[str, Any]):
+        """Logs pre-execution INTENT before tool/agent invocation."""
+        clean_inputs = redact_pii(inputs)
+        logger.info(
+            "PRE_EXECUTION_INTENT",
+            session_id=self.session_id,
+            agent=agent_name,
+            action=action,
+            inputs=clean_inputs
+        )
+
+    def log_outcome(
         self,
         agent_name: str,
         action: str,
@@ -43,11 +69,29 @@ class Tracer:
         outputs: Dict[str, Any],
         latency_ms: float
     ):
+        """Logs post-execution OUTCOME after tool/agent invocation and creates OpenTelemetry span."""
         self._step_counter += 1
         
-        # Redact PII from telemetry inputs and outputs
         clean_inputs = redact_pii(inputs)
         clean_outputs = redact_pii(outputs)
+
+        # 1. OpenTelemetry Span Creation
+        with otel_tracer.start_as_current_span(f"{agent_name}.{action}") as span:
+            span.set_attribute("session.id", self.session_id)
+            span.set_attribute("agent.name", agent_name)
+            span.set_attribute("action.name", action)
+            span.set_attribute("latency.ms", round(latency_ms, 2))
+
+        # 2. Structured JSON Outcome Log
+        logger.info(
+            "POST_EXECUTION_OUTCOME",
+            session_id=self.session_id,
+            step=self._step_counter,
+            agent=agent_name,
+            action=action,
+            latency_ms=round(latency_ms, 2),
+            outputs=clean_outputs
+        )
 
         step = TraceStep(
             step_number=self._step_counter,
@@ -60,17 +104,8 @@ class Tracer:
         )
         self.steps.append(step)
 
-        # Output Structured JSON Log (Satisfying Structured Logging evaluation criteria)
-        log_entry = {
-            "telemetry": "OpenTelemetrySpan",
-            "session_id": self.session_id,
-            "step": self._step_counter,
-            "agent": agent_name,
-            "action": action,
-            "latency_ms": round(latency_ms, 2),
-            "timestamp": step.timestamp
-        }
-        print(json.dumps(log_entry))
+    def add_step(self, agent_name: str, action: str, inputs: Dict[str, Any], outputs: Dict[str, Any], latency_ms: float):
+        self.log_outcome(agent_name, action, inputs, outputs, latency_ms)
 
     def get_payload(self) -> TracePayload:
         return TracePayload(
