@@ -330,6 +330,16 @@ select:focus, input[type="number"]:focus {
     border-radius: 0.5rem;
 }
 
+.adult-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    margin-left: 0.5rem;
+}
+
 .movie-info {
     padding: 1.25rem;
     display: flex;
@@ -342,6 +352,8 @@ select:focus, input[type="number"]:focus {
     font-family: 'Outfit', sans-serif;
     font-size: 1.2rem;
     font-weight: 700;
+    display: flex;
+    align-items: center;
 }
 
 .movie-meta {
@@ -381,6 +393,7 @@ select:focus, input[type="number"]:focus {
     color: #9ca3af;
 }
 
+/* Modal and HITL Popup Styles */
 .modal {
     position: fixed;
     top: 0;
@@ -410,12 +423,56 @@ select:focus, input[type="number"]:focus {
     flex-direction: column;
 }
 
+.hitl-modal {
+    max-width: 500px;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
+}
+
+.hitl-modal .modal-header h3 {
+    color: #f87171;
+    font-size: 1.1rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.hitl-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.confirm-btn {
+    flex: 1;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+    border: none;
+    padding: 0.8rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    color: #d1d5db;
+    border: 1px solid var(--border-color);
+    padding: 0.8rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
 }
 
 .close-btn {

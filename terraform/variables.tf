@@ -1,11 +1,11 @@
 variable "gcp_project_id" {
-  description = "Google Cloud Project ID"
+  description = "Google Cloud Project ID for deployment"
   type        = string
-  default     = "movie-recommender-agent-prod"
+  default     = "striking-retina-503305-j2"
 }
 
 variable "gcp_region" {
-  description = "GCP deployment region"
+  description = "Google Cloud Region for service deployment"
   type        = string
   default     = "us-central1"
 }

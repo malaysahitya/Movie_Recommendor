@@ -1,10 +1,12 @@
 from typing import List, Dict, Any
 from app.tools.scoring_tool import calculate_composite_score
 
+ADULT_GENRE_IDS = [27, 80, 53]  # Horror, Crime, Thriller
+
 class AnalysisAgent:
     """
     Sub-Agent 3: Analysis & Ranking
-    Deduplicates candidates, computes composite quality scores, and selects the absolute top 10 movies overall.
+    Deduplicates candidates, computes composite quality scores, detects 18+ adult themes, and selects top movies overall.
     """
     def __init__(self):
         self.name = "AnalysisAgent"
@@ -23,7 +25,7 @@ class AnalysisAgent:
                 seen_ids.add(movie_id)
                 unique_candidates.append(movie)
 
-        # 2. Compute composite quality score for each candidate
+        # 2. Compute composite quality score and flag 18+ content
         for movie in unique_candidates:
             composite = calculate_composite_score(
                 rating=movie.get("rating", 0.0),
@@ -31,6 +33,10 @@ class AnalysisAgent:
                 popularity=movie.get("popularity_score", 0.0)
             )
             movie["composite_score"] = composite
+            
+            # Check for 18+ adult content themes
+            g_ids = movie.get("genre_ids", [])
+            movie["is_18_plus"] = any(gid in ADULT_GENRE_IDS for gid in g_ids)
 
         # 3. Sort by composite quality score descending
         sorted_candidates = sorted(
@@ -39,5 +45,4 @@ class AnalysisAgent:
             reverse=True
         )
 
-        # 4. Select top `limit` (default 10) overall
         return sorted_candidates[:limit]

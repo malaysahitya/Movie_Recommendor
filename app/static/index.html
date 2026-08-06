@@ -38,12 +38,12 @@
                             <option value="Drama" selected>Drama</option>
                             <option value="Sci-Fi">Sci-Fi</option>
                             <option value="Romance">Romance</option>
-                            <option value="Thriller">Thriller</option>
-                            <option value="Horror">Horror</option>
+                            <option value="Thriller">Thriller (18+)</option>
+                            <option value="Horror">Horror (18+)</option>
+                            <option value="Crime">Crime (18+)</option>
                             <option value="Animation">Animation</option>
                             <option value="Mystery">Mystery</option>
                             <option value="Fantasy">Fantasy</option>
-                            <option value="Crime">Crime</option>
                             <option value="Adventure">Adventure</option>
                         </select>
                     </div>
@@ -99,6 +99,22 @@
             </div>
         </section>
     </main>
+
+    <!-- 18+ Human-In-The-Loop Age Verification Modal -->
+    <div id="hitlModal" class="modal hidden">
+        <div class="modal-content glass-modal hitl-modal">
+            <div class="modal-header">
+                <h3>🔞 Human-In-The-Loop: Age Verification Required</h3>
+            </div>
+            <div class="modal-body">
+                <p id="hitlMessage">This selection contains 18+ rated adult themes. Please explicitly confirm you are 18 years or older to proceed.</p>
+                <div class="hitl-actions">
+                    <button class="confirm-btn" onclick="confirmAgeAndResume()">✅ Confirm I am 18+</button>
+                    <button class="cancel-btn" onclick="closeHitlModal()">❌ Cancel Request</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Agent Trace Observability Modal -->
     <div id="traceModal" class="modal hidden">

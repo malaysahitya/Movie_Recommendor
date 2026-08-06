@@ -4,10 +4,10 @@ from pydantic import BaseModel, Field
 class WatchProvider(BaseModel):
     provider_name: str
     logo_path: Optional[str] = None
-    type: str = "flatrate"  # flatrate, rent, buy
+    type: str = "flatrate"
 
 class MovieItem(BaseModel):
-    id: str = Field(..., description="Unique movie ID (e.g. TMDB ID or slug)")
+    id: str = Field(..., description="Unique movie ID")
     title: str = Field(..., description="Movie title")
     original_title: Optional[str] = Field(None, description="Original title for Anime/Bollywood")
     release_year: int = Field(..., description="Release year")
@@ -24,16 +24,18 @@ class MovieItem(BaseModel):
     trailer_url: Optional[str] = Field(None, description="Trailer URL")
     watch_providers: List[WatchProvider] = Field(default_factory=list, description="Streaming platforms")
     agent_reasoning: str = Field(..., description="Agent's 'Why you should watch this' explanation")
+    is_18_plus: bool = Field(default=False, description="Flag indicating if movie contains 18+ adult themes")
 
 class RecommendationResponse(BaseModel):
-    status: str = "success"
+    status: str = "success"  # success or AWAITING_18_PLUS_APPROVAL
     genre: str
     industry: str
     year_range: str
     total_returned: int
-    movies: List[MovieItem]
+    movies: List[MovieItem] = Field(default_factory=list)
     session_id: str
     execution_time_ms: float
+    hitl_status: Optional[str] = Field(None, description="Human-in-the-loop status message if execution is paused")
 
 class TraceStep(BaseModel):
     step_number: int

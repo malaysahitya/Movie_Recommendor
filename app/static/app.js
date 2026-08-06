@@ -1,5 +1,6 @@
 let currentIndustry = 'Hollywood';
 let currentSessionId = 'web_session_' + Date.now();
+let lastPendingRequest = null;
 
 function setIndustry(industry, btnElement) {
     currentIndustry = industry;
@@ -25,25 +26,25 @@ async function handleFormSubmit(event) {
         return;
     }
 
-    // UI Loading state
     document.getElementById('resultsSection').classList.add('hidden');
     document.getElementById('loader').classList.remove('hidden');
     document.getElementById('submitBtn').disabled = true;
 
-    const requestPayload = {
+    lastPendingRequest = {
         genre: genre,
         industry: currentIndustry,
         start_year: startYear,
         end_year: endYear,
         limit: 10,
-        user_session_id: currentSessionId
+        user_session_id: currentSessionId,
+        user_confirmed_18_plus: false
     };
 
     try {
         const response = await fetch('/api/recommend', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestPayload)
+            body: JSON.stringify(lastPendingRequest)
         });
 
         if (!response.ok) {
@@ -52,6 +53,15 @@ async function handleFormSubmit(event) {
         }
 
         const data = await response.json();
+
+        // Check if Human-In-The-Loop 18+ confirmation is required
+        if (data.status === 'AWAITING_18_PLUS_APPROVAL') {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('hitlMessage').innerText = data.hitl_status || '🔞 18+ Content Warning: Age verification required.';
+            document.getElementById('hitlModal').classList.remove('hidden');
+            return;
+        }
+
         renderResults(data);
     } catch (err) {
         alert(`Error: ${err.message}`);
@@ -59,6 +69,43 @@ async function handleFormSubmit(event) {
         document.getElementById('loader').classList.add('hidden');
         document.getElementById('submitBtn').disabled = false;
     }
+}
+
+async function confirmAgeAndResume() {
+    closeHitlModal();
+    document.getElementById('loader').classList.remove('hidden');
+
+    try {
+        const confirmPayload = {
+            genre: lastPendingRequest.genre,
+            industry: lastPendingRequest.industry,
+            start_year: lastPendingRequest.start_year,
+            end_year: lastPendingRequest.end_year,
+            user_session_id: currentSessionId,
+            user_confirmed_18_plus: true
+        };
+
+        const response = await fetch('/api/confirm-age', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(confirmPayload)
+        });
+
+        if (!response.ok) {
+            throw new Error('Age confirmation failed.');
+        }
+
+        const data = await response.json();
+        renderResults(data);
+    } catch (err) {
+        alert(`Error: ${err.message}`);
+    } finally {
+        document.getElementById('loader').classList.add('hidden');
+    }
+}
+
+function closeHitlModal() {
+    document.getElementById('hitlModal').classList.add('hidden');
 }
 
 function renderResults(data) {
@@ -80,6 +127,8 @@ function renderResults(data) {
             `<span class="provider-chip">📺 ${p.provider_name}</span>`
         ).join('');
 
+        const adultBadge = movie.is_18_plus ? `<span class="adult-badge">🔞 18+</span>` : '';
+
         card.innerHTML = `
             <div class="poster-container">
                 ${posterImg}
@@ -87,7 +136,7 @@ function renderResults(data) {
                 <div class="rating-badge">⭐ ${movie.rating}/10</div>
             </div>
             <div class="movie-info">
-                <div class="movie-title">${movie.title}</div>
+                <div class="movie-title">${movie.title} ${adultBadge}</div>
                 <div class="movie-meta">
                     <span>📅 ${movie.release_year}</span>
                     <span>• Quality Score: <strong>${movie.composite_score}/100</strong></span>
