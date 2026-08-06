@@ -8,20 +8,29 @@ def calculate_composite_score(
 ) -> float:
     """
     Calculates a normalized composite quality score (0.0 to 100.0) combining rating, vote volume, and popularity.
-    
-    Formula:
-      Weighted Rating Score (70%): (rating / 10.0) * 70.0
-      Popularity & Vote Volume Score (30%): Log-scaled vote confidence & popularity percentile * 30.0
+
+    Args:
+        rating (float): Average audience rating score out of 10.0.
+        vote_count (int): Total number of audience votes recorded.
+        popularity (float): Popularity index metric.
+
+    Returns:
+        float: Composite quality index score between 0.0 and 100.0 rounded to 2 decimal places.
+
+    Raises:
+        ValueError: If rating is negative.
     """
-    if rating <= 0:
+    if rating < 0:
+        raise ValueError("Rating score cannot be negative.")
+
+    if rating == 0:
         return 0.0
 
     # 1. Base Rating Score (0 to 70 points)
     rating_component = (rating / 10.0) * 70.0
 
     # 2. Vote Confidence & Popularity (0 to 30 points)
-    # Use log scale so 1000 votes vs 100000 votes scales smoothly
-    vote_weight = min(1.0, math.log10(max(vote_count, 1)) / 5.0)  # capped at ~100k votes
+    vote_weight = min(1.0, math.log10(max(vote_count, 1)) / 5.0)
     pop_weight = min(1.0, math.log10(max(popularity, 1.0) + 1) / 3.0)
     
     volume_component = ((vote_weight * 0.6) + (pop_weight * 0.4)) * 30.0

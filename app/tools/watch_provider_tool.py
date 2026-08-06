@@ -9,8 +9,20 @@ TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w92"
 async def get_watch_providers(movie_id: str, industry: str = "Hollywood") -> List[WatchProvider]:
     """
     Fetches streaming availability for a movie from TMDB Watch Providers API.
-    Falls back to popular industry default streaming platforms if unlisted.
+
+    Args:
+        movie_id (str): Unique movie identifier (TMDB ID or numeric string).
+        industry (str): Regional cinema category ('Hollywood', 'Bollywood', or 'Anime').
+
+    Returns:
+        List[WatchProvider]: List of WatchProvider models containing provider name and type.
+
+    Raises:
+        ValueError: If movie_id is empty.
     """
+    if not movie_id:
+        raise ValueError("movie_id parameter cannot be empty.")
+
     providers: List[WatchProvider] = []
     
     if settings.TMDB_API_KEY and movie_id.isdigit():
@@ -22,7 +34,6 @@ async def get_watch_providers(movie_id: str, industry: str = "Hollywood") -> Lis
                 )
                 if res.status_code == 200:
                     data = res.json().get("results", {})
-                    # Check US or IN region data
                     region_data = data.get("IN") or data.get("US") or {}
                     flatrate = region_data.get("flatrate", [])
                     

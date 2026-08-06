@@ -1,6 +1,6 @@
 import httpx
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from app.config import settings
 
 class TMDBFetchParams(BaseModel):
@@ -32,27 +32,36 @@ async def fetch_movies_by_year_and_genre(
         year (int): Target release year (must be between 1950 and 2026).
         genre (str): Movie genre name (e.g., 'Action', 'Drama', 'Sci-Fi').
         industry (str): Regional industry ('Hollywood', 'Bollywood', or 'Anime').
-        limit (int): Max candidate movies to fetch (default: 20).
+        limit (int): Max candidate movies to fetch (default: 20, max: 50).
 
     Returns:
-        List[Dict[str, Any]]: List of dictionary items containing title, release date, ratings, vote count, synopsis, and poster URL.
+        List[Dict[str, Any]]: Candidate movies containing title, release_year, rating, vote_count, synopsis, and poster_url.
 
     Raises:
-        ValueError: If TMDB_API_KEY is missing or invalid.
+        ValueError: If input parameters fail Pydantic schema validation or API key is missing.
     """
-    if not settings.TMDB_API_KEY:
-        # Guided recovery prompt for LLM
+    # Actively enforce Pydantic schema validation at runtime
+    try:
+        validated_params = TMDBFetchParams(year=year, genre=genre, industry=industry, limit=limit)
+    except ValidationError as ve:
         return [{
-            "error": "TMDB_API_KEY_MISSING",
-            "recovery_instruction": "Please inform the user or configure TMDB_API_KEY in environment settings."
+            "error": "SCHEMA_VALIDATION_ERROR",
+            "details": str(ve),
+            "recovery_instruction": "Please correct the query parameters to match TMDBFetchParams schema specifications."
         }]
 
-    genre_lower = genre.lower().strip()
+    if not settings.TMDB_API_KEY:
+        return [{
+            "error": "TMDB_API_KEY_MISSING",
+            "recovery_instruction": "Please configure TMDB_API_KEY in environment settings before initiating research."
+        }]
+
+    genre_lower = validated_params.genre.lower().strip()
     genre_id = GENRE_MAP.get(genre_lower, None)
 
     params: Dict[str, Any] = {
         "api_key": settings.TMDB_API_KEY,
-        "primary_release_year": year,
+        "primary_release_year": validated_params.year,
         "sort_by": "vote_average.desc",
         "vote_count.gte": 50,
         "page": 1,
@@ -61,7 +70,7 @@ async def fetch_movies_by_year_and_genre(
     if genre_id:
         params["with_genres"] = genre_id
 
-    industry_clean = industry.lower().strip()
+    industry_clean = validated_params.industry.lower().strip()
     if industry_clean == "hollywood":
         params["with_original_language"] = "en"
     elif industry_clean == "bollywood":
@@ -87,7 +96,7 @@ async def fetch_movies_by_year_and_genre(
             results = data.get("results", [])
 
             candidate_movies = []
-            for item in results[:limit]:
+            for item in results[:validated_params.limit]:
                 poster_path = item.get("poster_path")
                 poster_url = f"{TMDB_IMAGE_BASE}{poster_path}" if poster_path else None
                 
@@ -95,7 +104,7 @@ async def fetch_movies_by_year_and_genre(
                     "id": str(item.get("id")),
                     "title": item.get("title") or item.get("original_title"),
                     "original_title": item.get("original_title"),
-                    "release_year": year,
+                    "release_year": validated_params.year,
                     "release_date": item.get("release_date"),
                     "rating": float(item.get("vote_average", 0.0)),
                     "vote_count": int(item.get("vote_count", 0)),

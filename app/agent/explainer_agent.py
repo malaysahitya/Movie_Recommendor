@@ -7,11 +7,13 @@ from app.agent.guardrails import model_router
 
 class ExplainerAgent:
     """
-    Sub-Agent 4: Explainer Agent (Gemini LLM Driven)
+    Sub-Agent 4: Explainer Agent (Gemini LLM Driven with Strategic Model Routing)
     Uses System Instructions and Gemini LLM reasoning to craft bespoke 'Why you should watch this' explanations.
+    Model routing is dynamically assigned via model_router('explainer') -> gemini-1.5-pro.
     """
     def __init__(self):
         self.name = "ExplainerAgent"
+        # Strategic Model Routing: Dynamically route task to model based on task complexity
         self.model_name = model_router("explainer")
         self.system_instruction = (
             "You are an expert film critic and cinema concierge AI. "
@@ -28,18 +30,27 @@ class ExplainerAgent:
     ) -> List[MovieItem]:
         final_movie_items: List[MovieItem] = []
 
-        # Configure Gemini if API key is present
+        # Configure Gemini model using dynamic model_router value (self.model_name)
         llm_available = False
         if settings.GEMINI_API_KEY:
             try:
                 genai.configure(api_key=settings.GEMINI_API_KEY)
+                # Actively use self.model_name from model_router rather than hardcoded string
                 llm_model = genai.GenerativeModel(
-                    model_name="gemini-1.5-flash",
+                    model_name=self.model_name,
                     system_instruction=self.system_instruction
                 )
                 llm_available = True
             except Exception:
-                llm_available = False
+                # Fallback to flash model if pro model quota is unavailable
+                try:
+                    llm_model = genai.GenerativeModel(
+                        model_name="gemini-1.5-flash",
+                        system_instruction=self.system_instruction
+                    )
+                    llm_available = True
+                except Exception:
+                    llm_available = False
 
         for movie in ranked_movies:
             movie_id = str(movie["id"])
@@ -56,7 +67,7 @@ class ExplainerAgent:
                 f"Renowned for its gripping plot and exceptional critical reception."
             )
 
-            # Generate Gemini LLM reasoning if available
+            # Generate Gemini LLM reasoning via routed model if available
             if llm_available:
                 try:
                     prompt = (
@@ -69,7 +80,7 @@ class ExplainerAgent:
                     if llm_response and llm_response.text:
                         reasoning = llm_response.text.strip()
                 except Exception:
-                    pass  # Gracefully fall back to structured reasoning
+                    pass
 
             watch_providers = await get_watch_providers(movie_id, industry)
 
